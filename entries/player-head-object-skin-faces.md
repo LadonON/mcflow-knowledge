@@ -3,10 +3,11 @@ title: "Drawing a player's full body from player-head text objects"
 minecraft_versions: ["26.3"]
 pack_format: 97
 paper_api_version: "26.3"
-verified_by: "server/screenshots/payping/single-settled-zoom.png, real-pay-settled.png (verifier-visual pass)"
+verified_by: "server/screenshots/payping/single-settled-zoom.png, real-pay-settled.png (verifier-visual pass); slim arms: server/screenshots/payping/slim-vs-wide-zoom.png, slim-before-after.png, SkinTest"
 sources:
   - "26.3 client jar: net.minecraft.network.chat.contents.objects.PlayerSprite, FontDescription$PlayerSprite (javap)"
   - "Adventure 5.2.0 (bundled with Paper 26.3): ObjectContents.playerHead(), PlayerHeadObjectContents.Builder (javap)"
+  - "26.3 client jar: net.minecraft.client.resources.DefaultPlayerSkin (javap: 18 skins, slim first, floorMod(uuid.hashCode(), 18))"
   - "research/Font Providers and Player Head Text Objects in 26.3.md"
 date: 2026-11-16
 ---
@@ -43,8 +44,24 @@ here at a fixed angle with shading. Proven in PayPing.
   The toast origin comes back from the pen position: the server places face i at
   `left + 8 * i`, so `left = local - s * 8 - 8 * i`.
 
+## Slim ("Alex") arms
+
+Slim skins use 3 px arms at the same UV origins, so a wide-arm face table shows
+a stray column from the neighbouring face (seen on 26.3: an orange pixel and a
+seam on the shoulder). Keep a second set of arm faces (3 px wide, arms at
+x -7..-4 and 4..7) in the face table and send those instead for slim skins.
+The client's choice of model:
+
+- With a `textures` property: base64 JSON, `textures.SKIN.metadata.model` is
+  `"slim"` for slim; absent means wide.
+- Without one (offline mode, or no `SKIN` entry): the client uses
+  `DefaultPlayerSkin.get(uuid)`, i.e. skin `floorMod(uuid.hashCode(), 18)`;
+  indexes 0-8 are slim, 9-17 wide. An offline-mode UUID is
+  `UUID.nameUUIDFromBytes("OfflinePlayer:" + name)`.
+
 ## Not proven
 
-- Slim (Alex) arm skins draw 4 px arm UVs, so a 1 px column of the next face may
-  show. The model type isn't read yet.
+- The `textures` metadata path in game: the offline-mode test server has no
+  signed skins, so only the default-skin path was seen working; reading
+  `"model": "slim"` is covered by unit tests (SkinTest) only.
 - Legacy 64x32 skins (the client converts them to 64x64, which should work).
