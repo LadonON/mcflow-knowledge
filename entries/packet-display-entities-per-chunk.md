@@ -3,7 +3,7 @@ title: "Per-chunk client-only ItemDisplay block models with PacketEvents on Pape
 minecraft_versions: ["26.3"]
 pack_format: 97
 paper_api_version: "26.3"
-verified_by: "server/screenshots/kinetic-network/motor-minus-64-a.png and -b.png (spinning from network speed), server/screenshots/block-framework/casing-and-shafts-xyz.png, after-restart-loaded.png, fill-4000-blocks.png; gate_performance 2026-11-17 12:10 (1,995 displays, 50 wandering bots: median 23.3 ms, p95 30.2 ms, 0 kicks); gate_memory pass; gate_performance 2026-11-17 13:52 with spin budget (1,922 spinning shafts, 50 bots: 0 kicks, median 22.5 ms, p95 42.2 ms); server/screenshots/rotation-spike/packet-9-shafts-32rpm-*.png; item-display turn: server/screenshots/kinetics-batch/furnace-block-vs-item-display.png (2026-11-18), wall gauge and cranks before and after the fix: lineup-top-down.png, fixed-lineup-top-down.png, fixed-wall-gauge-and-cranks.png"
+verified_by: "server/screenshots/kinetic-network/motor-minus-64-a.png and -b.png (spinning from network speed), server/screenshots/block-framework/casing-and-shafts-xyz.png, after-restart-loaded.png, fill-4000-blocks.png; gate_performance 2026-11-17 12:10 (1,995 displays, 50 wandering bots: median 23.3 ms, p95 30.2 ms, 0 kicks); gate_memory pass; gate_performance 2026-11-17 13:52 with spin budget (1,922 spinning shafts, 50 bots: 0 kicks, median 22.5 ms, p95 42.2 ms); server/screenshots/rotation-spike/packet-9-shafts-32rpm-*.png; item-display turn: server/screenshots/kinetics-batch/furnace-block-vs-item-display.png (2026-11-18), wall gauge and cranks before and after the fix: lineup-top-down.png, fixed-lineup-top-down.png, fixed-wall-gauge-and-cranks.png; item models shared with display parts: server/screenshots/kinetics-processing-leftovers/vertical-gearbox-south-face.png and vertical-gearbox-south-face-fixed.png; scale and contents: basin-from-above.png (2026-11-18)"
 sources:
   - "packetevents-api 2.14.0 jar (javap): WrapperPlayServerSpawnEntity, WrapperPlayServerEntityMetadata, EntityDataTypes, User.writePacket/flushPackets"
   - "packetevents-spigot 2.14.0 jar (javap -c): SpigotReflectionUtil.generateEntityId uses the server's Entity counter"
@@ -39,6 +39,14 @@ With that, no per-player state is needed. `gate_memory` showed no growth across 
 Draw models along Y and turn them with the left rotation: X axis = 90° around Z `(0, 0, √½, √½)`, Z axis = 90° around X `(√½, 0, 0, √½)`. Proven in game for all three axes. Spinning goes in the right rotation, so it applies before the axis turn; proven in game with X-axis shafts and cogs spinning.
 
 - **Item displays turn the model 180° about Y.** A vanilla furnace placed facing north shows its front to the north. The same furnace as an `item_display` with no rotation shows its back to the north. So a display oriented with a blockstate's x/y rotation faces the opposite way, unless a 180° Y turn is added innermost: right rotation = (spin or needle turn) × rotY(180). Keep it out of any pivot maths, which works in model space (`PacketBlockVisuals#ITEM_DISPLAY_TURN`). Symmetric models (shafts, casings) hide the turn. It showed on wall gauges (dial on the wrong side), cranks, and the clutch's stopped half.
+
+## Item models are shared with display parts
+
+A display part shows the item model of the block's own id (`createpaper:<id>`), the same item definition the block's item uses in inventories. So an item model that isn't the plain block model shows up in the world too. Create's vertical gearbox item is its gearbox already turned on its side, and its encased cogwheel, chain gearshift and speed controller items have their moving parts built in: pointing those ids at Create's item models drew the vertical gearbox turned a second time (its holed side where the plain plate belongs). Only point an id at a Create item model that is the block model itself, or give display parts their own model ids.
+
+## Items shown inside a block
+
+To show item stacks (a basin's contents), spawn ItemDisplays with the stack itself and set the SCALE metadata (index 12, a Vector3f) as well as translation and rotation: 0.375, lying flat (90° about X), in a 3 × 3 grid 0.25 apart, 3/16 above the bottom of the block, reads well. Replace them by destroying the old entity ids and spawning the new ones for the chunk's viewers.
 
 ## Cost
 
